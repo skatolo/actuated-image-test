@@ -1,0 +1,24 @@
+name: boot-analysis
+
+on:
+  pull_request:
+    branches:
+      - '*'
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+jobs:
+  boot-analysis:
+    name: boot-analysis
+    runs-on: actuated-2cpu-4gb
+    steps:
+      - uses: actions/checkout@v4
+      - name: systemd-analyze
+        run: sudo systemd-analyze
+      - name: systemd-analyze blame
+        run: sudo systemd-analyze blame
+      - name: systemd-analyze critical-chain
+        run: sudo systemd-analyze critical-chain
