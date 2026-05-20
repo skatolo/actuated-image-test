@@ -22,6 +22,70 @@ jobs:
         run: sudo systemd-analyze blame
       - name: systemd-analyze critical-chain
         run: sudo systemd-analyze critical-chain
+      - name: boot diagnostics
+        run: |
+          set -euxo pipefail
+
+          mkdir -p /tmp/bootdiag
+
+          sudo systemd-analyze > /tmp/bootdiag/systemd-analyze.txt
+          sudo systemd-analyze blame > /tmp/bootdiag/blame.txt
+          sudo systemd-analyze critical-chain > /tmp/bootdiag/critical-chain.txt
+          sudo systemd-analyze critical-chain multi-user.target > /tmp/bootdiag/critical-chain-multi-user.txt
+          sudo systemd-analyze critical-chain docker.socket > /tmp/bootdiag/critical-chain-docker-socket.txt
+          sudo systemd-analyze critical-chain docker.service > /tmp/bootdiag/critical-chain-docker-service.txt
+          sudo systemd-analyze critical-chain runner.mount > /tmp/bootdiag/critical-chain-runner-mount.txt || true
+          sudo systemd-analyze plot > /tmp/bootdiag/boot.svg
+
+          sudo journalctl -b -o short-monotonic > /tmp/bootdiag/journal-monotonic.txt
+
+          sudo journalctl -b -o short-monotonic \
+            -u systemd-journald \
+            -u systemd-udev-trigger \
+            -u systemd-modules-load \
+            -u systemd-remount-fs \
+            -u systemd-binfmt \
+            -u systemd-random-seed \
+            -u runner.mount \
+            -u mount-runner.service \
+            -u docker.socket \
+            -u docker.service \
+            -u actuated-agent.service \
+            > /tmp/bootdiag/journal-critical-units.txt || true
+
+          sudo systemctl list-dependencies multi-user.target > /tmp/bootdiag/deps-multi-user.txt
+          sudo systemctl list-dependencies docker.socket > /tmp/bootdiag/deps-docker-socket.txt || true
+          sudo systemctl list-dependencies docker.service > /tmp/bootdiag/deps-docker-service.txt || true
+
+          sudo systemctl cat runner.mount > /tmp/bootdiag/unit-runner-mount.txt || true
+          sudo systemctl cat mount-runner.service > /tmp/bootdiag/unit-mount-runner.txt || true
+          sudo systemctl cat docker.socket > /tmp/bootdiag/unit-docker-socket.txt || true
+          sudo systemctl cat docker.service > /tmp/bootdiag/unit-docker-service.txt || true
+          sudo systemctl cat actuated-agent.service > /tmp/bootdiag/unit-actuated-agent.txt || true
+
+          findmnt -R -o TARGET,SOURCE,FSTYPE,OPTIONS > /tmp/bootdiag/findmnt.txt
+          cat /etc/fstab > /tmp/bootdiag/fstab.txt || true
+
+          lsblk -o NAME,MAJ:MIN,SIZE,FSTYPE,MOUNTPOINTS,MODEL > /tmp/bootdiag/lsblk.txt
+          sudo blkid > /tmp/bootdiag/blkid.txt || true
+
+          sudo udevadm info --query=all --name=/dev/vdb > /tmp/bootdiag/udev-vdb.txt || true
+          sudo udevadm info --query=all --name=/dev/root > /tmp/bootdiag/udev-root.txt || true
+
+          grep -R . /etc/modules /etc/modules-load.d /usr/lib/modules-load.d /run/modules-load.d \
+            > /tmp/bootdiag/modules-load-config.txt 2>/dev/null || true
+
+          lsmod > /tmp/bootdiag/lsmod.txt || true
+          cat /proc/cmdline > /tmp/bootdiag/proc-cmdline.txt
+          cat /proc/sys/kernel/random/entropy_avail > /tmp/bootdiag/entropy-avail.txt
+
+          tar -C /tmp -czf /tmp/bootdiag.tar.gz bootdiag
+          ls -lh /tmp/bootdiag.tar.gz
+      - name: upload boot diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootdiag-x86_64
+          path: /tmp/bootdiag.tar.gz
 
   boot-analysis-arm64:
     name: boot-analysis-arm64
@@ -34,3 +98,67 @@ jobs:
         run: sudo systemd-analyze blame
       - name: systemd-analyze critical-chain
         run: sudo systemd-analyze critical-chain
+      - name: boot diagnostics
+        run: |
+          set -euxo pipefail
+
+          mkdir -p /tmp/bootdiag
+
+          sudo systemd-analyze > /tmp/bootdiag/systemd-analyze.txt
+          sudo systemd-analyze blame > /tmp/bootdiag/blame.txt
+          sudo systemd-analyze critical-chain > /tmp/bootdiag/critical-chain.txt
+          sudo systemd-analyze critical-chain multi-user.target > /tmp/bootdiag/critical-chain-multi-user.txt
+          sudo systemd-analyze critical-chain docker.socket > /tmp/bootdiag/critical-chain-docker-socket.txt
+          sudo systemd-analyze critical-chain docker.service > /tmp/bootdiag/critical-chain-docker-service.txt
+          sudo systemd-analyze critical-chain runner.mount > /tmp/bootdiag/critical-chain-runner-mount.txt || true
+          sudo systemd-analyze plot > /tmp/bootdiag/boot.svg
+
+          sudo journalctl -b -o short-monotonic > /tmp/bootdiag/journal-monotonic.txt
+
+          sudo journalctl -b -o short-monotonic \
+            -u systemd-journald \
+            -u systemd-udev-trigger \
+            -u systemd-modules-load \
+            -u systemd-remount-fs \
+            -u systemd-binfmt \
+            -u systemd-random-seed \
+            -u runner.mount \
+            -u mount-runner.service \
+            -u docker.socket \
+            -u docker.service \
+            -u actuated-agent.service \
+            > /tmp/bootdiag/journal-critical-units.txt || true
+
+          sudo systemctl list-dependencies multi-user.target > /tmp/bootdiag/deps-multi-user.txt
+          sudo systemctl list-dependencies docker.socket > /tmp/bootdiag/deps-docker-socket.txt || true
+          sudo systemctl list-dependencies docker.service > /tmp/bootdiag/deps-docker-service.txt || true
+
+          sudo systemctl cat runner.mount > /tmp/bootdiag/unit-runner-mount.txt || true
+          sudo systemctl cat mount-runner.service > /tmp/bootdiag/unit-mount-runner.txt || true
+          sudo systemctl cat docker.socket > /tmp/bootdiag/unit-docker-socket.txt || true
+          sudo systemctl cat docker.service > /tmp/bootdiag/unit-docker-service.txt || true
+          sudo systemctl cat actuated-agent.service > /tmp/bootdiag/unit-actuated-agent.txt || true
+
+          findmnt -R -o TARGET,SOURCE,FSTYPE,OPTIONS > /tmp/bootdiag/findmnt.txt
+          cat /etc/fstab > /tmp/bootdiag/fstab.txt || true
+
+          lsblk -o NAME,MAJ:MIN,SIZE,FSTYPE,MOUNTPOINTS,MODEL > /tmp/bootdiag/lsblk.txt
+          sudo blkid > /tmp/bootdiag/blkid.txt || true
+
+          sudo udevadm info --query=all --name=/dev/vdb > /tmp/bootdiag/udev-vdb.txt || true
+          sudo udevadm info --query=all --name=/dev/root > /tmp/bootdiag/udev-root.txt || true
+
+          grep -R . /etc/modules /etc/modules-load.d /usr/lib/modules-load.d /run/modules-load.d \
+            > /tmp/bootdiag/modules-load-config.txt 2>/dev/null || true
+
+          lsmod > /tmp/bootdiag/lsmod.txt || true
+          cat /proc/cmdline > /tmp/bootdiag/proc-cmdline.txt
+          cat /proc/sys/kernel/random/entropy_avail > /tmp/bootdiag/entropy-avail.txt
+
+          tar -C /tmp -czf /tmp/bootdiag.tar.gz bootdiag
+          ls -lh /tmp/bootdiag.tar.gz
+      - name: upload boot diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootdiag-arm64
+          path: /tmp/bootdiag.tar.gz
